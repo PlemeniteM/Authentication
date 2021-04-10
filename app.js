@@ -3,7 +3,8 @@ require('dotenv').config();
 const express=require("express");
 const ejs=require("ejs");
 const mongoose=require("mongoose");
-const md5=require("md5");
+const bcrpyt=require("bcrypt");
+const saltRounds=10;
 mongoose.connect("mongodb://localhost:27017/userDB",{useNewUrlParser:true,useUnifiedTopology:true});
 
 
@@ -46,30 +47,36 @@ app.get("/secret",function(req,res){
     res.render("secrets.ejs")
 })
 app.post("/register",function(req,res){
-   const newUser=new User({
-       email : req.body.username,
-       password:md5(req.body.password)
-   })
-   newUser.save(function(err){
-       if(err)console.log(err);
-       else {
-           res.render("secrets.ejs")
-       }
-   });
-
+    bcrpyt.hash(req.body.password,saltRounds,function(err,hash){
+        const newUser=new User({
+            email : req.body.username,
+            password:hash
+        })
+        newUser.save(function(err){
+            if(err)console.log(err);
+            else {
+                res.render("secrets.ejs")
+            }
+        });
+     
+    })
+   
    
 })
 app.post("/login",function(req,res){
     const name=req.body.username;
-    const pass=md5(req.body.password);
+    const pass=req.body.password;
     User.findOne({email:name},function(err,founcUser){
             if(err)console.log(err);
             else{
                 if(founcUser){
-                    if(founcUser.password===pass){
-                       
-                       res.render("secrets.ejs")
-                    }
+                    
+    bcrpyt.compare(pass,founcUser.password,function(err,result){
+            if(err)console.log(err);
+            if(result)res.render("secrets.ejs");
+    })
+                      
+                    
                 }
             }
     })
